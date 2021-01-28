@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        * {
+            padding: 0;
+            margin: 0;
+        }
+
+        input {
+            outline: none;
+        }
+
+        .container {
+            width: 600px;
+            margin: 50px auto;
+            border: 1px solid #e4393c;
+            text-align: center;
+        }
+
+        .data {
+            text-align: center;
+        }
+
+        .data input {
+            text-align: center;
+            width: 50px;
+            margin-right: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <canvas width="600" height="400">你的浏览器不支持canvas</canvas>
+    </div>
+    <div class="data">
+        <p>
+            <span>15-20岁</span>:<input type="number" value="4" min="0"/>
+            <span>20-25岁</span>:<input type="number" value="8" min="0"/>
+            <span>25-30岁</span>:<input type="number" value="6" min="0"/>
+            <span>30岁以上</span>:<input type="number" value="2" min="0"/>
+        </p>
+    </div>
+</body>
+<script>
+    window.onload = function () {
+        var canvas = document.querySelector("canvas");
+        var ctx = canvas.getContext("2d");
+        var inps = document.querySelectorAll(".data p input");
+        function getdata() {
+            var sum = 0;
+            var data = [];
+            for (var i = 0; i < inps.length; i++) {
+                var v = parseInt(inps[i].value);
+                var k = inps[i].previousElementSibling.textContent;
+                data.push({ k, v });
+                sum += v;
+            }
+            return { data, sum };
+        }
+
+        function PieCharts(obj) {
+            this.ctx = obj.ctx
+            this.data = obj.data;
+            this.datasum = obj.datasum;
+            this.circledot = obj.circledot;
+            this.radius = obj.radius;
+            this.init();
+        }
+        PieCharts.prototype.init = function () {
+            this.showCharts();
+        }
+        //创建提示图标
+        PieCharts.prototype.mark = function (color, index, text) {
+            //颜色
+            this.ctx.beginPath();
+            this.ctx.moveTo(20, (index + 1) * 30);
+            this.ctx.lineTo(50, (index + 1) * 30);
+            this.ctx.lineWidth = 15;
+            this.ctx.strokeStyle = color;
+            this.ctx.stroke();
+            // 提示文字
+            this.ctx.font = "14px 宋体";
+            this.ctx.textBaseline = "middle";
+            this.ctx.fillText(text, 60, (index + 1) * 30)
+        }
+        //绘制饼形图函数
+        PieCharts.prototype.showCharts = function () {
+            //清空画布原有内容
+            this.ctx.canvas.width = this.ctx.canvas.width;
+
+            var that = this;
+            var preAngle = 0;
+            this.data.forEach(function (item, index) {
+                var angle = item.v / that.datasum * 2 * Math.PI;
+                that.ctx.beginPath();
+                that.ctx.moveTo(that.circledot[0], that.circledot[1]);
+                that.ctx.arc(that.circledot[0], that.circledot[1], that.radius, preAngle, angle + preAngle);
+                var color = that.getradomcolor();
+                that.ctx.fillStyle = color;
+                that.ctx.closePath();
+                that.ctx.fill();
+                
+                // 根据弧度画中心线及提示文本
+                that.halfline((angle + preAngle+preAngle)/2,item.k,color);
+
+                //调用绘制提示图标方法
+                that.mark(color, index, item.k);
+                preAngle = angle + preAngle;
+            })
+        }
+        //根据弧度画中心线及提示文本
+        PieCharts.prototype.halfline = function (angle, text, color) {
+            var y = Math.sin(angle) * (this.radius + 35);
+            var x = Math.cos(angle) * (this.radius + 35);
+
+            this.ctx.beginPath();
+            this.ctx.lineWidth = 1
+            this.ctx.moveTo(this.circledot[0], this.circledot[1])
+            this.ctx.lineTo(this.circledot[0] + x, this.circledot[1] + y)
+            this.ctx.strokeStyle = color;
+            this.ctx.stroke();
+            this.ctx.font = "bold 14px 宋体";
+            this.ctx.textBaseline = "bottom";
+
+            var measureObj = this.ctx.measureText(text);
+            var textWidth = measureObj.width;//计算文字长度
+            this.ctx.moveTo(this.circledot[0] + x, this.circledot[1] + y);//底线开始路径
+            if(x<0){
+                this.ctx.textAlign = "right";//文字对齐方式
+                this.ctx.lineTo(this.circledot[0] + x - textWidth, this.circledot[1] + y);//绘画底线
+                this.ctx.stroke();
+            }else{
+                this.ctx.textAlign = "left";//文字对齐方式
+                this.ctx.lineTo(this.circledot[0] + x + textWidth, this.circledot[1] + y);//绘画底线
+                this.ctx.stroke();
+            }
+            this.ctx.fillText(text, this.circledot[0] + x, this.circledot[1] + y);//绘制文字
+            
+            this.ctx.textAlign = "left";//将对齐方式设为原值
+        }
+        //随机颜色
+        PieCharts.prototype.getradomcolor = function () {
+            var r = Math.floor(Math.random() * 256);
+            var g = Math.floor(Math.random() * 256);
+            var b = Math.floor(Math.random() * 256);
+            return `rgb(${r},${g},${b})`;
+        }
+
+        var piecharts = new PieCharts({
+            'ctx': ctx,
+            'data': getdata().data,
+            'datasum': getdata().sum,
+            'circledot': [350, 200],
+            'radius': 150
+        })
+        for (var j = 0; j < inps.length; j++) {
+            inps[j].onchange = function () {
+                piecharts.data = getdata().data;
+                piecharts.datasum = getdata().sum;
+                piecharts.init();
+            }
+        }
+    }
+</script>
+</html>
